@@ -1,6 +1,12 @@
 #-*- coding:utf-8 -*-
 import sys, os
 from http.server import BaseHTTPRequestHandler,HTTPServer
+import subprocess
+
+def run_cgi(self, full_path):
+    data = subprocess.check_output(["python3", full_path],shell=False)
+    self.send_content(data)
+
 
 class ServerException(Exception):
     '''服务器内部错误'''
@@ -49,7 +55,16 @@ class case_directory_index_file(object):
     #响应index.html的内容
     def act(self, handler):
         handler.handle_file(self.index_path(handler))
+class case_cgi_file(object):
+    '''脚本文件处理'''
 
+    def test(self, handler):
+        return os.path.isfile(handler.full_path) and \
+               handler.full_path.endswith('.py')
+
+    def act(self, handler):
+        ##运行脚本文件
+        handler.run_cgi(handler.full_path)
 
 class RequestHandler(BaseHTTPRequestHandler):
     '''
@@ -58,6 +73,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     '''
 
     Cases = [case_no_file(),
+             case_cgi_file(),
              case_existing_file(),
              case_directory_index_file(),
              case_always_fail()]
